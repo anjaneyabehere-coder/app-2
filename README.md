@@ -1,110 +1,191 @@
 import React, { useState } from 'react';
 
-const EmailApp = () => {
-  const [step, setStep] = useState(1); // 1: Link, 2: Compose
-  const [email, setEmail] = useState('');
+export default function BulkEmailApp() {
+  const [step, setStep] = useState(1);
+  const [userEmail, setUserEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [linked, setLinked] = useState(false);
-  
-  // Email Content States
+  const [isLinked, setIsLinked] = useState(false);
+
   const [cc, setCc] = useState('example@cc.com');
-  const [mailBody, setMailBody] = useState('Write your message here...');
-  const [recipients, setRecipients] = useState([]);
+  const [mailBody, setMailBody] = useState('Enter your message here...');
+  const [isEditingCc, setIsEditingCc] = useState(false);
   const [isEditingBody, setIsEditingBody] = useState(false);
 
-  // 1. Linking Logic
+  const [recipientList, setRecipientList] = useState([]);
+  const [sentStatus, setSentStatus] = useState({});
+
+  // ✅ Send OTP
   const handleSendOTP = () => {
-    alert(`OTP sent to ${email}`);
-    // Backend call would happen here
+    if (!userEmail) {
+      alert("Enter email first");
+      return;
+    }
+
+    alert(`OTP sent to ${userEmail}`);
+    // TODO: Call backend API
   };
 
-  const verifyOTP = () => {
-    if (otp === "1234") { // Simplified for example
-      setLinked(true);
+  // ✅ Verify OTP
+  const handleVerifyOTP = () => {
+    if (otp === "1234") {
+      setIsLinked(true);
+    } else {
+      alert("Invalid OTP");
     }
   };
 
-  // 2. Recipient Logic
-  const handlePasteRecipients = (e) => {
-    const pastedData = e.target.value.split('\n');
-    setRecipients(pastedData);
+  // ✅ Parse emails (paste or type)
+  const handlePasteEmails = (e) => {
+    const emails = e.target.value
+      .split(/[\n, ,]+/)
+      .map(e => e.trim())
+      .filter(e => e.includes('@'));
+
+    setRecipientList(emails);
   };
 
-  const sendMailToUser = (targetEmail) => {
-    alert(`Email sent successfully to ${targetEmail}`);
-    // This would trigger your backend SMTP function
+  // ✅ Update recipient manually
+  const updateRecipient = (index, value) => {
+    const updated = [...recipientList];
+    updated[index] = value;
+    setRecipientList(updated);
+  };
+
+  // ✅ Send email (mock)
+  const sendEmailTo = (target) => {
+    console.log("Sending:", {
+      from: userEmail,
+      to: target,
+      cc,
+      mailBody
+    });
+
+    setSentStatus(prev => ({
+      ...prev,
+      [target]: true
+    }));
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: 'auto' }}>
-      {step === 1 ? (
-        <section>
-          <h2>Link Your Email</h2>
-          <input 
-            placeholder="Enter your email ID" 
-            onChange={(e) => setEmail(e.target.value)} 
+    <div style={{ padding: 40, maxWidth: 800, margin: 'auto', fontFamily: 'sans-serif' }}>
+
+      {/* STEP 1: LINK EMAIL */}
+      {step === 1 && (
+        <div style={{ border: '1px solid #ddd', padding: 20, borderRadius: 8 }}>
+          <h3>Link Your Account</h3>
+
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={userEmail}
+            onChange={(e) => setUserEmail(e.target.value)}
+            style={{ padding: 8 }}
           />
-          <button onClick={handleSendOTP}>Send a OTP to link your email</button>
-          
-          <div style={{ marginTop: '10px' }}>
-            <input placeholder="Enter OTP" onChange={(e) => setOtp(e.target.value)} />
-            <button onClick={verifyOTP}>Verify</button>
-          </div>
 
-          {linked && <p style={{ color: 'green' }}>Email linked successfully</p>}
-          
-          {linked && (
-            <button 
-              style={{ position: 'fixed', bottom: '20px', right: '20px' }}
-              onClick={() => setStep(2)}
-            >
-              Next
+          <button onClick={handleSendOTP} style={{ marginLeft: 10 }}>
+            Send OTP
+          </button>
+
+          <div style={{ marginTop: 20 }}>
+            <input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              style={{ padding: 8 }}
+            />
+            <button onClick={handleVerifyOTP} style={{ marginLeft: 10 }}>
+              Verify
             </button>
-          )}
-        </section>
-      ) : (
-        <section>
-          <h2>Compose Email</h2>
-          {/* Double click to edit CC */}
-          <div onDoubleClick={() => console.log("Editing CC")}>
-            <strong>CC:</strong> 
-            <input value={cc} onChange={(e) => setCc(e.target.value)} />
           </div>
 
-          {/* Double click to edit Body */}
-          <div onDoubleClick={() => setIsEditingBody(true)} style={{ border: '1px solid #ccc', minHeight: '100px', padding: '10px' }}>
+          {isLinked && (
+            <>
+              <p style={{ color: 'green', marginTop: 10 }}>
+                Email linked successfully
+              </p>
+              <button onClick={() => setStep(2)}>Next</button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* STEP 2: COMPOSE */}
+      {step === 2 && (
+        <div style={{ border: '1px solid #ddd', padding: 20, borderRadius: 8 }}>
+          <h3>Compose Email</h3>
+
+          {/* CC */}
+          <div onDoubleClick={() => setIsEditingCc(true)} style={{ marginBottom: 10 }}>
+            <strong>CC: </strong>
+            {isEditingCc ? (
+              <input
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
+                onBlur={() => setIsEditingCc(false)}
+                autoFocus
+              />
+            ) : (
+              <span>{cc} (double-click to edit)</span>
+            )}
+          </div>
+
+          {/* BODY */}
+          <div
+            onDoubleClick={() => setIsEditingBody(true)}
+            style={{
+              border: '1px solid #eee',
+              padding: 15,
+              minHeight: 100,
+              background: '#f9f9f9'
+            }}
+          >
             {isEditingBody ? (
-              <textarea 
-                fullWidth 
+              <textarea
+                value={mailBody}
+                onChange={(e) => setMailBody(e.target.value)}
                 onBlur={() => setIsEditingBody(false)}
-                value={mailBody} 
-                onChange={(e) => setMailBody(e.target.value)} 
+                style={{ width: '100%', height: 100 }}
+                autoFocus
               />
             ) : (
               <p>{mailBody}</p>
             )}
           </div>
 
-          <h3>Paste Recipient Email IDs</h3>
-          <textarea 
-            placeholder="Double click to paste list"
-            onDoubleClick={() => {/* Trigger paste prompt */}}
-            onChange={handlePasteRecipients}
-            style={{ width: '100%', height: '100px' }}
-          />
+          {/* RECIPIENT INPUT */}
+          <div style={{ marginTop: 30 }}>
+            <h4>Paste Emails</h4>
+            <textarea
+              placeholder="Paste emails separated by comma, space, or new line"
+              onChange={handlePasteEmails}
+              style={{ width: '100%', height: 80 }}
+            />
+          </div>
 
-          <div style={{ marginTop: '20px' }}>
-            {recipients.map((rec, index) => (
-              <div key={index} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <input defaultValue={rec} />
-                <button onClick={() => sendMailToUser(rec)}>Send</button>
+          {/* LIST */}
+          <div style={{ marginTop: 20 }}>
+            {recipientList.map((rec, index) => (
+              <div key={index} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                <input
+                  value={rec}
+                  onChange={(e) => updateRecipient(index, e.target.value)}
+                  style={{ width: 250 }}
+                />
+
+                <button onClick={() => sendEmailTo(rec)}>
+                  Send
+                </button>
+
+                {sentStatus[rec] && (
+                  <span style={{ color: 'green', fontSize: 12 }}>
+                    Sent ✓
+                  </span>
+                )}
               </div>
             ))}
           </div>
-        </section>
+        </div>
       )}
     </div>
   );
-};
-
-export default EmailApp;
+}
